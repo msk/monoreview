@@ -1,0 +1,67 @@
+{
+  "generated_at": "2025-09-20T08:17:22-07:00",
+  "repositories": {
+    "git@github.com:petabi/review.git": {
+      "commit_hash": "b5baa39bb135b67bc14a5cd2589e8e4ad15bde14",
+      "package_name": "review",
+      "directory": "review",
+      "repo_type": "main"
+    },
+    "https://github.com/petabi/review-database.git": {
+      "commit_hash": "da68b65c952814b1e81bf17af2af6d61b3483e09",
+      "package_name": "review-database",
+      "directory": "review-database",
+      "repo_type": "dependency",
+      "specified_rev": "da68b65",
+      "specified_tag": null
+    },
+    "https://github.com/aicers/attrievent.git": {
+      "commit_hash": "485fe5c967f8e9b1ba7541648cb8464ed4534cc6",
+      "package_name": "attrievent",
+      "directory": "attrievent",
+      "repo_type": "dependency",
+      "specified_rev": null,
+      "specified_tag": "0.2.1"
+    },
+    "https://github.com/petabi/review-protocol.git": {
+      "commit_hash": "fd5ccf1a91560de3452a595737ea03f79a9d08e5",
+      "package_name": "review-protocol",
+      "directory": "review-protocol",
+      "repo_type": "dependency",
+      "specified_rev": "fd5ccf1",
+      "specified_tag": null
+    },
+    "https://github.com/petabi/oinq.git": {
+      "commit_hash": "c48b3dbafedb7df3bc595ddea15a5c96bae00b2e",
+      "package_name": "oinq",
+      "directory": "oinq",
+      "repo_type": "dependency",
+      "specified_rev": null,
+      "specified_tag": "0.13.0"
+    },
+    "https://github.com/aicers/review-web.git": {
+      "commit_hash": "cd1eba9e33805bf868a16ae0e961fb7fd0db65f5",
+      "package_name": "review-web",
+      "directory": "review-web",
+      "repo_type": "dependency",
+      "specified_rev": "cd1eba9",
+      "specified_tag": null
+    },
+    "https://github.com/aicers/roxy.git": {
+      "commit_hash": "77ee3f2a44ca6d92732457d210ec9420deb8aaf7",
+      "package_name": "roxy",
+      "directory": "roxy",
+      "repo_type": "dependency",
+      "specified_rev": null,
+      "specified_tag": "0.5.0"
+    },
+    "https://github.com/vinesystems/vinum.git": {
+      "commit_hash": "d06fcfb6da5d11e4dc3c35d62d735ca27c1f46b2",
+      "package_name": "vinum",
+      "directory": "vinum",
+      "repo_type": "dependency",
+      "specified_rev": null,
+      "specified_tag": "1.0.3"
+    }
+  }
+}
