@@ -1,0 +1,83 @@
+[package]
+name = "review-protocol"
+version = "0.12.0"
+edition = "2024"
+
+[features]
+client = [ "async-trait", "bincode", "oinq", "quinn", "rustls", "rustls-pemfile", "semver", "thiserror",]
+server = [ "async-trait", "anyhow", "bincode", "oinq", "quinn", "semver", "thiserror",]
+
+[dependencies]
+serde_repr = "0.1.19"
+
+[dev-dependencies]
+rcgen = "0.13"
+
+[dependencies.anyhow]
+version = "1"
+optional = true
+
+[dependencies.async-trait]
+version = "0.1"
+optional = true
+
+[dependencies.bincode]
+version = "1"
+optional = true
+
+[dependencies.ipnet]
+version = "2"
+features = [ "serde",]
+
+[dependencies.num_enum]
+version = "0.7"
+
+[dependencies.oinq]
+path = "../oinq"
+optional = true
+
+[dependencies.quinn]
+version = "0.11"
+optional = true
+
+[dependencies.rustls]
+version = "0.23"
+default-features = false
+optional = true
+
+[dependencies.rustls-pemfile]
+version = "2"
+optional = true
+
+[dependencies.semver]
+version = "1"
+optional = true
+
+[dependencies.serde]
+version = "1"
+features = [ "derive",]
+
+[dependencies.thiserror]
+version = "2"
+optional = true
+
+[dev-dependencies.quinn]
+version = "0.11"
+features = [ "ring",]
+
+[dev-dependencies.rustls]
+version = "0.23"
+default-features = false
+features = [ "ring", "std",]
+
+[dev-dependencies.tokio]
+version = "1"
+features = [ "macros", "rt",]
+
+[dev-dependencies.time]
+version = "=0.3.39"
+default-features = false
+
+[lints.clippy]
+pedantic = "warn"
+unwrap_used = "warn"

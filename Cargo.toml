@@ -1,0 +1,3 @@
+[workspace]
+members = [ "review", "review-database", "attrievent", "review-protocol", "oinq", "review-web", "roxy", "vinum",]
+resolver = "2"

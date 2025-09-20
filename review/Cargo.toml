@@ -1,0 +1,109 @@
+[package]
+name = "review"
+version = "0.44.0"
+edition = "2024"
+description = "REview: A Central Management Server for AICE"
+publish = false
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+bincode = "1"
+bytes = "1"
+futures = "0.3"
+hostname-validator = "1.1"
+http = "1"
+ip2location = "0.5"
+jiff = "0.2"
+num-derive = "0.4"
+num-traits = "0.2"
+num_enum = "0.7"
+structured = "0.15.0"
+strum = "0.27"
+strum_macros = "0.27"
+syslog = "7"
+tempfile = "3"
+thiserror = "2"
+tracing = "0.1"
+tracing-appender = "0.2"
+url = "2"
+
+[features]
+default = [ "web",]
+web = [ "review-web",]
+
+[dependencies.chrono]
+version = "0.4.39"
+default-features = false
+features = [ "now", "serde",]
+
+[dependencies.config]
+version = "0.15"
+features = [ "toml",]
+default-features = false
+
+[dependencies.ipnet]
+version = "2"
+features = [ "serde",]
+
+[dependencies.pkcs8]
+version = "0.10"
+default-features = false
+features = [ "alloc",]
+
+[dependencies.quinn]
+version = "0.11"
+default-features = false
+features = [ "ring", "runtime-tokio", "rustls",]
+
+[dependencies.rcgen]
+version = "0.14"
+features = [ "x509-parser",]
+
+[dependencies.reqwest]
+version = "0.12"
+default-features = false
+features = [ "rustls-tls-native-roots",]
+
+[dependencies.review-database]
+path = "../review-database"
+
+[dependencies.review-protocol]
+path = "../review-protocol"
+features = [ "server",]
+
+[dependencies.review-web]
+path = "../review-web"
+optional = true
+
+[dependencies.roxy]
+path = "../roxy"
+
+[dependencies.rustls]
+version = "0.23"
+default-features = false
+features = [ "ring", "std",]
+
+[dependencies.serde]
+version = "1"
+features = [ "derive",]
+
+[dependencies.tokio]
+version = "1"
+features = [ "macros", "rt-multi-thread", "signal", "time",]
+
+[dependencies.tracing-subscriber]
+version = "0.3"
+features = [ "env-filter",]
+
+[dependencies.x509-parser]
+version = "0.18"
+features = [ "verify",]
+
+[lints.clippy]
+pedantic = "warn"
+unwrap_used = "warn"
+
+[package.metadata.deb]
+maintainer = "Petabi Packaging Team <pkg@petabi.com>"
+copyright = "2025 Petabi, Inc."
