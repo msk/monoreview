@@ -29,23 +29,16 @@ macro_rules! find_rdp_attr_by_kind {
         }
     }};
 }
-#[derive(Serialize, Deserialize)]
-pub struct RdpBruteForceFields {
-    pub src_addr: IpAddr,
-    pub dst_addrs: Vec<IpAddr>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub proto: u8,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+
+pub type RdpBruteForceFields = RdpBruteForceFieldsV0_41;
 
 impl RdpBruteForceFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.start_time.to_rfc3339(),
@@ -57,7 +50,45 @@ impl RdpBruteForceFields {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct RdpBruteForceFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<RdpBruteForceFieldsV0_39> for RdpBruteForceFieldsV0_41 {
+    fn from(value: RdpBruteForceFieldsV0_39) -> Self {
+        Self {
+            sensor: String::new(),
+            src_addr: value.src_addr,
+            dst_addrs: value.dst_addrs,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            proto: value.proto,
+            confidence: 0.3, // default value for RdpBruteForce
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RdpBruteForceFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_addrs: Vec<IpAddr>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub category: EventCategory,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct RdpBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addrs: Vec<IpAddr>,
@@ -87,6 +118,7 @@ impl fmt::Display for RdpBruteForce {
 impl RdpBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &RdpBruteForceFields) -> Self {
         RdpBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addrs: fields.dst_addrs.clone(),

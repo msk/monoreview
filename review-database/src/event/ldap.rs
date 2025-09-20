@@ -32,8 +32,30 @@ macro_rules! find_ldap_attr_by_kind {
     }};
 }
 
+pub type LdapBruteForceFields = LdapBruteForceFieldsV0_41;
+
+impl LdapBruteForceFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
+            self.category.to_string(),
+            self.sensor,
+            self.src_addr.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            get_user_pw_list(&self.user_pw_list),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.confidence.to_string()
+        )
+    }
+}
+
 #[derive(Serialize, Deserialize)]
-pub struct LdapBruteForceFields {
+pub struct LdapBruteForceFieldsV0_41 {
+    pub sensor: String,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
     pub dst_port: u16,
@@ -45,22 +67,32 @@ pub struct LdapBruteForceFields {
     pub category: EventCategory,
 }
 
-impl LdapBruteForceFields {
-    #[must_use]
-    pub fn syslog_rfc5424(&self) -> String {
-        format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_port={:?} proto={:?} user_pw_list={:?} start_time={:?} end_time={:?} confidence={:?}",
-            self.category.to_string(),
-            self.src_addr.to_string(),
-            self.dst_addr.to_string(),
-            self.dst_port.to_string(),
-            self.proto.to_string(),
-            get_user_pw_list(&self.user_pw_list),
-            self.start_time.to_rfc3339(),
-            self.end_time.to_rfc3339(),
-            self.confidence.to_string()
-        )
+impl From<LdapBruteForceFieldsV0_39> for LdapBruteForceFieldsV0_41 {
+    fn from(value: LdapBruteForceFieldsV0_39) -> Self {
+        Self {
+            sensor: String::new(),
+            src_addr: value.src_addr,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            user_pw_list: value.user_pw_list,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            confidence: 0.3, // default value for LdapBruteForce
+            category: value.category,
+        }
     }
+}
+#[derive(Serialize, Deserialize)]
+pub struct LdapBruteForceFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub user_pw_list: Vec<(String, String)>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
 }
 
 fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
@@ -77,6 +109,7 @@ fn get_user_pw_list(user_pw_list: &[(String, String)]) -> String {
 
 #[derive(Serialize, Deserialize)]
 pub struct LdapBruteForce {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -110,6 +143,7 @@ impl fmt::Display for LdapBruteForce {
 impl LdapBruteForce {
     pub(super) fn new(time: DateTime<Utc>, fields: &LdapBruteForceFields) -> Self {
         LdapBruteForce {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,
@@ -185,25 +219,7 @@ impl Match for LdapBruteForce {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LdapEventFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub end_time: i64,
-    pub message_id: u32,
-    pub version: u8,
-    pub opcode: Vec<String>,
-    pub result: Vec<String>,
-    pub diagnostic_message: Vec<String>,
-    pub object: Vec<String>,
-    pub argument: Vec<String>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type LdapEventFields = LdapEventFieldsV0_39;
 
 impl LdapEventFields {
     #[must_use]
@@ -228,6 +244,68 @@ impl LdapEventFields {
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapEventFieldsV0_39 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<LdapEventFieldsV0_38> for LdapEventFieldsV0_39 {
+    fn from(value: LdapEventFieldsV0_38) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            end_time: value.end_time,
+            message_id: value.message_id,
+            version: value.version,
+            opcode: value.opcode,
+            result: value.result,
+            diagnostic_message: value.diagnostic_message,
+            object: value.object,
+            argument: value.argument,
+            confidence: 1.0, // default value for LdapPlainText
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LdapEventFieldsV0_38 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub end_time: i64,
+    pub message_id: u32,
+    pub version: u8,
+    pub opcode: Vec<String>,
+    pub result: Vec<String>,
+    pub diagnostic_message: Vec<String>,
+    pub object: Vec<String>,
+    pub argument: Vec<String>,
+    pub category: EventCategory,
 }
 
 #[derive(Deserialize, Serialize)]

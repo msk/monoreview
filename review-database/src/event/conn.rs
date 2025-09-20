@@ -35,24 +35,15 @@ macro_rules! find_conn_attr_by_kind {
     }};
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct PortScanFields {
-    pub src_addr: IpAddr,
-    pub dst_addr: IpAddr,
-    pub dst_ports: Vec<u16>,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub proto: u8,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type PortScanFields = PortScanFieldsV0_41;
 
 impl PortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addr={:?} dst_ports={:?} start_time={:?} end_time={:?} proto={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             self.dst_addr.to_string(),
             vector_to_string(&self.dst_ports),
@@ -64,9 +55,50 @@ impl PortScanFields {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct PortScanFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_ports: Vec<u16>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<PortScanFieldsV0_39> for PortScanFieldsV0_41 {
+    fn from(value: PortScanFieldsV0_39) -> Self {
+        Self {
+            sensor: String::new(),
+            src_addr: value.src_addr,
+            dst_addr: value.dst_addr,
+            dst_ports: value.dst_ports,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            proto: value.proto,
+            confidence: 0.3, // default value for PortScan
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PortScanFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_addr: IpAddr,
+    pub dst_ports: Vec<u16>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub proto: u8,
+    pub category: EventCategory,
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 pub struct PortScan {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_addr: IpAddr,
@@ -98,6 +130,7 @@ impl fmt::Display for PortScan {
 impl PortScan {
     pub(super) fn new(time: DateTime<Utc>, fields: &PortScanFields) -> Self {
         PortScan {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_addr: fields.dst_addr,
@@ -174,24 +207,15 @@ impl Match for PortScan {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct MultiHostPortScanFields {
-    pub src_addr: IpAddr,
-    pub dst_port: u16,
-    pub dst_addrs: Vec<IpAddr>,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type MultiHostPortScanFields = MultiHostPortScanFieldsV0_41;
 
 impl MultiHostPortScanFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} dst_addrs={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             self.src_addr.to_string(),
             vector_to_string(&self.dst_addrs),
             self.dst_port.to_string(),
@@ -203,9 +227,50 @@ impl MultiHostPortScanFields {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct MultiHostPortScanFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<MultiHostPortScanFieldsV0_39> for MultiHostPortScanFieldsV0_41 {
+    fn from(value: MultiHostPortScanFieldsV0_39) -> Self {
+        Self {
+            sensor: String::new(),
+            src_addr: value.src_addr,
+            dst_port: value.dst_port,
+            dst_addrs: value.dst_addrs,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            confidence: 0.3, // default value for MultiHostPortScan
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct MultiHostPortScanFieldsV0_39 {
+    pub src_addr: IpAddr,
+    pub dst_port: u16,
+    pub dst_addrs: Vec<IpAddr>,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 pub struct MultiHostPortScan {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addr: IpAddr,
     pub dst_port: u16,
@@ -237,6 +302,7 @@ impl fmt::Display for MultiHostPortScan {
 impl MultiHostPortScan {
     pub(super) fn new(time: DateTime<Utc>, fields: &MultiHostPortScanFields) -> Self {
         MultiHostPortScan {
+            sensor: fields.sensor.clone(),
             time,
             src_addr: fields.src_addr,
             dst_port: fields.dst_port,
@@ -311,23 +377,15 @@ impl Match for MultiHostPortScan {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct ExternalDdosFields {
-    pub src_addrs: Vec<IpAddr>,
-    pub dst_addr: IpAddr,
-    pub proto: u8,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type ExternalDdosFields = ExternalDdosFieldsV0_41;
 
 impl ExternalDdosFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addrs={:?} dst_addr={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
             self.category.to_string(),
+            self.sensor,
             vector_to_string(&self.src_addrs),
             self.dst_addr.to_string(),
             self.proto.to_string(),
@@ -338,9 +396,47 @@ impl ExternalDdosFields {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ExternalDdosFieldsV0_41 {
+    pub sensor: String,
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<ExternalDdosFieldsV0_39> for ExternalDdosFieldsV0_41 {
+    fn from(value: ExternalDdosFieldsV0_39) -> Self {
+        Self {
+            sensor: String::new(),
+            src_addrs: value.src_addrs,
+            dst_addr: value.dst_addr,
+            proto: value.proto,
+            start_time: value.start_time,
+            end_time: value.end_time,
+            confidence: 0.3, // default value for ExternalDdos
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ExternalDdosFieldsV0_39 {
+    pub src_addrs: Vec<IpAddr>,
+    pub dst_addr: IpAddr,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub category: EventCategory,
+}
+
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize)]
 pub struct ExternalDdos {
+    pub sensor: String,
     pub time: DateTime<Utc>,
     pub src_addrs: Vec<IpAddr>,
     pub dst_addr: IpAddr,
@@ -370,6 +466,7 @@ impl fmt::Display for ExternalDdos {
 impl ExternalDdos {
     pub(super) fn new(time: DateTime<Utc>, fields: &ExternalDdosFields) -> Self {
         ExternalDdos {
+            sensor: fields.sensor.clone(),
             time,
             src_addrs: fields.src_addrs.clone(),
             dst_addr: fields.dst_addr,

@@ -56,8 +56,8 @@ pub use self::{
     },
     ftp::{BlocklistFtp, FtpBruteForce, FtpBruteForceFields, FtpEventFields, FtpPlainText},
     http::{
-        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpThreat,
-        HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
+        BlocklistHttp, BlocklistHttpFields, DgaFields, DomainGenerationAlgorithm, HttpEventFields,
+        HttpThreat, HttpThreatFields, NonBrowser, RepeatedHttpSessions, RepeatedHttpSessionsFields,
     },
     kerberos::{BlocklistKerberos, BlocklistKerberosFields},
     ldap::{BlocklistLdap, LdapBruteForce, LdapBruteForceFields, LdapEventFields, LdapPlainText},
@@ -72,7 +72,27 @@ pub use self::{
     ssh::{BlocklistSsh, BlocklistSshFields},
     sysmon::WindowsThreat,
     tls::{BlocklistTls, BlocklistTlsFields, SuspiciousTlsTraffic},
-    tor::{HttpEventFields, TorConnection, TorConnectionConn},
+    tor::{TorConnection, TorConnectionConn},
+};
+pub(crate) use self::{
+    conn::{
+        ExternalDdosFieldsV0_39, ExternalDdosFieldsV0_41, MultiHostPortScanFieldsV0_39,
+        MultiHostPortScanFieldsV0_41, PortScanFieldsV0_39, PortScanFieldsV0_41,
+    },
+    dns::{CryptocurrencyMiningPoolFieldsV0_39, CryptocurrencyMiningPoolFieldsV0_41},
+    ftp::{
+        FtpBruteForceFieldsV0_39, FtpBruteForceFieldsV0_41, FtpEventFieldsV0_38,
+        FtpEventFieldsV0_39,
+    },
+    http::{
+        HttpEventFieldsV0_39, HttpEventFieldsV0_41, RepeatedHttpSessionsFieldsV0_39,
+        RepeatedHttpSessionsFieldsV0_41,
+    },
+    ldap::{
+        LdapBruteForceFieldsV0_39, LdapBruteForceFieldsV0_41, LdapEventFieldsV0_38,
+        LdapEventFieldsV0_39,
+    },
+    rdp::{RdpBruteForceFieldsV0_39, RdpBruteForceFieldsV0_41},
 };
 use super::{
     Customer, EventCategory, Network, TriagePolicy,
@@ -2362,146 +2382,6 @@ impl Iterator for EventIterator<'_> {
             return Some(Err(InvalidEvent::Key(k)));
         };
         match kind {
-            EventKind::DnsCovertChannel => {
-                let Ok(fields) = bincode::deserialize::<DnsEventFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::DnsCovertChannel(DnsCovertChannel::new(time, fields)),
-                )))
-            }
-            EventKind::HttpThreat => {
-                let Ok(fields) = bincode::deserialize::<HttpThreatFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::HttpThreat(HttpThreat::new(fields.time, fields)),
-                )))
-            }
-            EventKind::RdpBruteForce => {
-                let Ok(fields) = bincode::deserialize::<RdpBruteForceFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::RdpBruteForce(RdpBruteForce::new(time, &fields)),
-                )))
-            }
-            EventKind::RepeatedHttpSessions => {
-                let Ok(fields) = bincode::deserialize::<RepeatedHttpSessionsFields>(v.as_ref())
-                else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::RepeatedHttpSessions(RepeatedHttpSessions::new(time, &fields)),
-                )))
-            }
-            EventKind::TorConnection => {
-                let Ok(fields) = bincode::deserialize::<HttpEventFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::TorConnection(TorConnection::new(time, &fields)),
-                )))
-            }
-            EventKind::TorConnectionConn => {
-                let Ok(fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::TorConnectionConn(TorConnectionConn::new(time, fields)),
-                )))
-            }
-            EventKind::DomainGenerationAlgorithm => {
-                let Ok(fields) = bincode::deserialize::<DgaFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm::new(time, fields)),
-                )))
-            }
-            EventKind::FtpBruteForce => {
-                let Ok(fields) = bincode::deserialize::<FtpBruteForceFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::FtpBruteForce(FtpBruteForce::new(time, &fields)),
-                )))
-            }
-            EventKind::FtpPlainText => {
-                let Ok(fields) = bincode::deserialize::<FtpEventFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::FtpPlainText(FtpPlainText::new(time, fields)),
-                )))
-            }
-            EventKind::PortScan => {
-                let Ok(fields) = bincode::deserialize::<PortScanFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((key, Event::PortScan(PortScan::new(time, &fields)))))
-            }
-            EventKind::MultiHostPortScan => {
-                let Ok(fields) = bincode::deserialize::<MultiHostPortScanFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::MultiHostPortScan(MultiHostPortScan::new(time, &fields)),
-                )))
-            }
-            EventKind::NonBrowser => {
-                let Ok(fields) = bincode::deserialize::<HttpEventFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((key, Event::NonBrowser(NonBrowser::new(time, &fields)))))
-            }
-            EventKind::LdapBruteForce => {
-                let Ok(fields) = bincode::deserialize::<LdapBruteForceFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::LdapBruteForce(LdapBruteForce::new(time, &fields)),
-                )))
-            }
-            EventKind::LdapPlainText => {
-                let Ok(fields) = bincode::deserialize::<LdapEventFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::LdapPlainText(LdapPlainText::new(time, fields)),
-                )))
-            }
-            EventKind::ExternalDdos => {
-                let Ok(fields) = bincode::deserialize::<ExternalDdosFields>(v.as_ref()) else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::ExternalDdos(ExternalDdos::new(time, &fields)),
-                )))
-            }
-            EventKind::CryptocurrencyMiningPool => {
-                let Ok(fields) = bincode::deserialize::<CryptocurrencyMiningPoolFields>(v.as_ref())
-                else {
-                    return Some(Err(InvalidEvent::Value(v)));
-                };
-                Some(Ok((
-                    key,
-                    Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
-                )))
-            }
             EventKind::BlocklistBootp => {
                 let Ok(fields) = bincode::deserialize::<BlocklistBootpFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
@@ -2655,23 +2535,93 @@ impl Iterator for EventIterator<'_> {
                     Event::Blocklist(RecordType::Tls(BlocklistTls::new(time, fields))),
                 )))
             }
-            EventKind::WindowsThreat => {
-                let Ok(fields) = bincode::deserialize::<WindowsThreat>(v.as_ref()) else {
+            EventKind::CryptocurrencyMiningPool => {
+                let Ok(fields) = bincode::deserialize::<CryptocurrencyMiningPoolFields>(v.as_ref())
+                else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
-                Some(Ok((key, Event::WindowsThreat(fields))))
+                Some(Ok((
+                    key,
+                    Event::CryptocurrencyMiningPool(CryptocurrencyMiningPool::new(time, fields)),
+                )))
             }
-            EventKind::NetworkThreat => {
-                let Ok(fields) = bincode::deserialize::<NetworkThreat>(v.as_ref()) else {
+            EventKind::DnsCovertChannel => {
+                let Ok(fields) = bincode::deserialize::<DnsEventFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
-                Some(Ok((key, Event::NetworkThreat(fields))))
+                Some(Ok((
+                    key,
+                    Event::DnsCovertChannel(DnsCovertChannel::new(time, fields)),
+                )))
+            }
+            EventKind::DomainGenerationAlgorithm => {
+                let Ok(fields) = bincode::deserialize::<DgaFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::DomainGenerationAlgorithm(DomainGenerationAlgorithm::new(time, fields)),
+                )))
+            }
+            EventKind::ExternalDdos => {
+                let Ok(fields) = bincode::deserialize::<ExternalDdosFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::ExternalDdos(ExternalDdos::new(time, &fields)),
+                )))
             }
             EventKind::ExtraThreat => {
                 let Ok(fields) = bincode::deserialize::<ExtraThreat>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
                 };
                 Some(Ok((key, Event::ExtraThreat(fields))))
+            }
+            EventKind::FtpBruteForce => {
+                let Ok(fields) = bincode::deserialize::<FtpBruteForceFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::FtpBruteForce(FtpBruteForce::new(time, &fields)),
+                )))
+            }
+            EventKind::FtpPlainText => {
+                let Ok(fields) = bincode::deserialize::<FtpEventFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::FtpPlainText(FtpPlainText::new(time, fields)),
+                )))
+            }
+            EventKind::HttpThreat => {
+                let Ok(fields) = bincode::deserialize::<HttpThreatFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::HttpThreat(HttpThreat::new(fields.time, fields)),
+                )))
+            }
+            EventKind::LdapBruteForce => {
+                let Ok(fields) = bincode::deserialize::<LdapBruteForceFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::LdapBruteForce(LdapBruteForce::new(time, &fields)),
+                )))
+            }
+            EventKind::LdapPlainText => {
+                let Ok(fields) = bincode::deserialize::<LdapEventFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::LdapPlainText(LdapPlainText::new(time, fields)),
+                )))
             }
             EventKind::LockyRansomware => {
                 let Ok(fields) = bincode::deserialize::<DnsEventFields>(v.as_ref()) else {
@@ -2682,6 +2632,52 @@ impl Iterator for EventIterator<'_> {
                     Event::LockyRansomware(LockyRansomware::new(time, fields)),
                 )))
             }
+            EventKind::MultiHostPortScan => {
+                let Ok(fields) = bincode::deserialize::<MultiHostPortScanFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::MultiHostPortScan(MultiHostPortScan::new(time, &fields)),
+                )))
+            }
+            EventKind::NetworkThreat => {
+                let Ok(fields) = bincode::deserialize::<NetworkThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::NetworkThreat(fields))))
+            }
+            EventKind::NonBrowser => {
+                let Ok(fields) = bincode::deserialize::<HttpEventFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::NonBrowser(NonBrowser::new(time, &fields)))))
+            }
+            EventKind::PortScan => {
+                let Ok(fields) = bincode::deserialize::<PortScanFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::PortScan(PortScan::new(time, &fields)))))
+            }
+            EventKind::RdpBruteForce => {
+                let Ok(fields) = bincode::deserialize::<RdpBruteForceFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::RdpBruteForce(RdpBruteForce::new(time, &fields)),
+                )))
+            }
+            EventKind::RepeatedHttpSessions => {
+                let Ok(fields) = bincode::deserialize::<RepeatedHttpSessionsFields>(v.as_ref())
+                else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::RepeatedHttpSessions(RepeatedHttpSessions::new(time, &fields)),
+                )))
+            }
             EventKind::SuspiciousTlsTraffic => {
                 let Ok(fields) = bincode::deserialize::<BlocklistTlsFields>(v.as_ref()) else {
                     return Some(Err(InvalidEvent::Value(v)));
@@ -2690,6 +2686,30 @@ impl Iterator for EventIterator<'_> {
                     key,
                     Event::SuspiciousTlsTraffic(SuspiciousTlsTraffic::new(time, fields)),
                 )))
+            }
+            EventKind::TorConnection => {
+                let Ok(fields) = bincode::deserialize::<HttpEventFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::TorConnection(TorConnection::new(time, &fields)),
+                )))
+            }
+            EventKind::TorConnectionConn => {
+                let Ok(fields) = bincode::deserialize::<BlocklistConnFields>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((
+                    key,
+                    Event::TorConnectionConn(TorConnectionConn::new(time, fields)),
+                )))
+            }
+            EventKind::WindowsThreat => {
+                let Ok(fields) = bincode::deserialize::<WindowsThreat>(v.as_ref()) else {
+                    return Some(Err(InvalidEvent::Value(v)));
+                };
+                Some(Ok((key, Event::WindowsThreat(fields))))
             }
         }
     }
@@ -3264,6 +3284,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_portscan() {
         let fields = PortScanFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_ports: vec![80, 443, 8000, 8080, 8888, 8443, 9000, 9001, 9002],
@@ -3285,7 +3306,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="PortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_ports="80,443,8000,8080,8888,8443,9000,9001,9002" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" proto="6" confidence="0.3""#
         );
 
         let port_scan = Event::PortScan(PortScan::new(
@@ -3302,6 +3323,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_multihostportscan() {
         let fields = MultiHostPortScanFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -3326,7 +3348,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="MultiHostPortScan" category="Reconnaissance" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" dst_port="80" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let multi_host_port_scan = Event::MultiHostPortScan(MultiHostPortScan::new(
@@ -3343,6 +3365,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_externalddos() {
         let fields = ExternalDdosFields {
+            sensor: String::new(),
             src_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)),
@@ -3365,7 +3388,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="ExternalDdos" category="Impact" sensor="" src_addrs="127.0.0.2,127.0.0.3" dst_addr="127.0.0.1" proto="6" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let external_ddos = Event::ExternalDdos(ExternalDdos::new(
@@ -3883,6 +3906,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ftpbruteforce() {
         let fields = FtpBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 21,
@@ -3906,7 +3930,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="FtpBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="21" proto="6" user_list="user1,user_2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" is_internal="true" confidence="0.3""#
         );
 
         let ftp_brute_force = Event::FtpBruteForce(FtpBruteForce::new(
@@ -4098,6 +4122,7 @@ mod tests {
 
     #[tokio::test]
     async fn syslog_for_repeatedhttpsessions() {
+        let now = Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap();
         let fields = RepeatedHttpSessionsFields {
             sensor: "collector1".to_string(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
@@ -4105,6 +4130,8 @@ mod tests {
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 443,
             proto: 6,
+            start_time: now,
+            end_time: now,
             confidence: 0.3,
             category: EventCategory::Exfiltration,
         };
@@ -4120,7 +4147,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" confidence="0.3""#
+            r#"time="1970-01-01T01:01:01+00:00" event_kind="RepeatedHttpSessions" category="Exfiltration" sensor="collector1" src_addr="127.0.0.1" src_port="10000" dst_addr="127.0.0.2" dst_port="443" proto="6" start_time="1970-01-01T01:01:01+00:00" end_time="1970-01-01T01:01:01+00:00" confidence="0.3""#
         );
         let repeated_http_sessions = Event::RepeatedHttpSessions(RepeatedHttpSessions::new(
             Utc.with_ymd_and_hms(1970, 1, 1, 1, 1, 1).unwrap(),
@@ -4185,6 +4212,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_ldapbruteforce() {
         let fields = LdapBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addr: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
             dst_port: 389,
@@ -4210,7 +4238,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="LdapBruteForce" category="CredentialAccess" sensor="" src_addr="127.0.0.1" dst_addr="127.0.0.2" dst_port="389" proto="6" user_pw_list="user1:pw1,user_2:pw2" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:01:02+00:00" confidence="0.3""#
         );
 
         let ldap_brute_force = Event::LdapBruteForce(LdapBruteForce::new(
@@ -4597,6 +4625,7 @@ mod tests {
     #[tokio::test]
     async fn syslog_for_rdpbruteforce() {
         let fields = RdpBruteForceFields {
+            sensor: String::new(),
             src_addr: IpAddr::V4(Ipv4Addr::LOCALHOST),
             dst_addrs: vec![
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)),
@@ -4620,7 +4649,7 @@ mod tests {
         let (_, _, syslog_message) = message.unwrap();
         assert_eq!(
             &syslog_message,
-            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
+            r#"time="1970-01-01T00:01:01+00:00" event_kind="RdpBruteForce" category="Discovery" sensor="" src_addr="127.0.0.1" dst_addrs="127.0.0.2,127.0.0.3" start_time="1970-01-01T00:01:01+00:00" end_time="1970-01-01T00:10:02+00:00" proto="6" confidence="0.3""#
         );
 
         let rdp_brute_force = Event::RdpBruteForce(RdpBruteForce::new(

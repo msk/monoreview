@@ -1,7 +1,7 @@
 use std::{fmt, net::IpAddr, num::NonZeroU8};
 
 use attrievent::attribute::{ConnAttr, HttpAttr, RawEventAttrKind};
-use chrono::{DateTime, Utc, serde::ts_nanoseconds};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{EventCategory, LearningMethod, MEDIUM, TriageScore, common::Match};
@@ -37,83 +37,6 @@ macro_rules! find_conn_attr_by_kind {
             None
         }
     }};
-}
-
-#[derive(Deserialize, Serialize)]
-#[allow(clippy::module_name_repetitions)]
-pub struct HttpEventFields {
-    pub sensor: String,
-    #[serde(with = "ts_nanoseconds")]
-    pub end_time: DateTime<Utc>,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub method: String,
-    pub host: String,
-    pub uri: String,
-    pub referer: String,
-    pub version: String,
-    pub user_agent: String,
-    pub request_len: usize,
-    pub response_len: usize,
-    pub status_code: u16,
-    pub status_msg: String,
-    pub username: String,
-    pub password: String,
-    pub cookie: String,
-    pub content_encoding: String,
-    pub content_type: String,
-    pub cache_control: String,
-    pub orig_filenames: Vec<String>,
-    pub orig_mime_types: Vec<String>,
-    pub resp_filenames: Vec<String>,
-    pub resp_mime_types: Vec<String>,
-    pub post_body: Vec<u8>,
-    pub state: String,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
-
-impl HttpEventFields {
-    #[must_use]
-    pub fn syslog_rfc5424(&self) -> String {
-        format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
-            self.category.to_string(),
-            self.sensor,
-            self.src_addr.to_string(),
-            self.src_port.to_string(),
-            self.dst_addr.to_string(),
-            self.dst_port.to_string(),
-            self.proto.to_string(),
-            self.end_time.to_rfc3339(),
-            self.method,
-            self.host,
-            self.uri,
-            self.referer,
-            self.version,
-            self.user_agent,
-            self.request_len.to_string(),
-            self.response_len.to_string(),
-            self.status_code.to_string(),
-            self.status_msg,
-            self.username,
-            self.password,
-            self.cookie,
-            self.content_encoding,
-            self.content_type,
-            self.cache_control,
-            self.orig_filenames.join(","),
-            self.orig_mime_types.join(","),
-            self.resp_filenames.join(","),
-            self.resp_mime_types.join(","),
-            get_post_body(&self.post_body),
-            self.state,
-            self.confidence.to_string()
-        )
-    }
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -194,7 +117,7 @@ impl fmt::Display for TorConnection {
 }
 
 impl TorConnection {
-    pub(super) fn new(time: DateTime<Utc>, fields: &HttpEventFields) -> Self {
+    pub(super) fn new(time: DateTime<Utc>, fields: &super::HttpEventFields) -> Self {
         TorConnection {
             time,
             sensor: fields.sensor.clone(),

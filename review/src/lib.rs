@@ -154,7 +154,7 @@ async fn run_web(
     let ip_locator = if let Some(path) = config.ip2location() {
         Some(
             ip2location::DB::from_file(path)
-                .map_err(|e| anyhow!("cannot read IP location database: {:#?}", e))?,
+                .map_err(|e| anyhow!("cannot read IP location database: {e:#?}"))?,
         )
     } else {
         None

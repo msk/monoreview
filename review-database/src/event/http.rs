@@ -5,10 +5,7 @@ use attrievent::attribute::{HttpAttr, RawEventAttrKind};
 use chrono::{DateTime, Utc, serde::ts_nanoseconds};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    EventCategory, EventFilter, HttpEventFields, LOW, LearningMethod, MEDIUM, TriageScore,
-    common::Match,
-};
+use super::{EventCategory, EventFilter, LOW, LearningMethod, MEDIUM, TriageScore, common::Match};
 use crate::event::common::{AttrValue, triage_scores_to_string};
 
 macro_rules! find_http_attr_by_kind {
@@ -52,23 +49,13 @@ macro_rules! find_http_attr_by_kind {
 }
 pub(super) use find_http_attr_by_kind;
 
-#[derive(Serialize, Deserialize)]
-pub struct RepeatedHttpSessionsFields {
-    pub sensor: String,
-    pub src_addr: IpAddr,
-    pub src_port: u16,
-    pub dst_addr: IpAddr,
-    pub dst_port: u16,
-    pub proto: u8,
-    pub confidence: f32,
-    pub category: EventCategory,
-}
+pub type HttpEventFields = HttpEventFieldsV0_41;
 
-impl RepeatedHttpSessionsFields {
+impl HttpEventFields {
     #[must_use]
     pub fn syslog_rfc5424(&self) -> String {
         format!(
-            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} confidence={:?}",
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} end_time={:?} method={:?} host={:?} uri={:?} referer={:?} version={:?} user_agent={:?} request_len={:?} response_len={:?} status_code={:?} status_msg={:?} username={:?} password={:?} cookie={:?} content_encoding={:?} content_type={:?} cache_control={:?} orig_filenames={:?} orig_mime_types={:?} resp_filenames={:?} resp_mime_types={:?} post_body={:?} state={:?} confidence={:?}",
             self.category.to_string(),
             self.sensor,
             self.src_addr.to_string(),
@@ -76,9 +63,204 @@ impl RepeatedHttpSessionsFields {
             self.dst_addr.to_string(),
             self.dst_port.to_string(),
             self.proto.to_string(),
+            self.end_time.to_rfc3339(),
+            self.method,
+            self.host,
+            self.uri,
+            self.referer,
+            self.version,
+            self.user_agent,
+            self.request_len.to_string(),
+            self.response_len.to_string(),
+            self.status_code.to_string(),
+            self.status_msg,
+            self.username,
+            self.password,
+            self.cookie,
+            self.content_encoding,
+            self.content_type,
+            self.cache_control,
+            self.orig_filenames.join(","),
+            self.orig_mime_types.join(","),
+            self.resp_filenames.join(","),
+            self.resp_mime_types.join(","),
+            get_post_body(&self.post_body),
+            self.state,
             self.confidence.to_string()
         )
     }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct HttpEventFieldsV0_41 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<HttpEventFieldsV0_39> for HttpEventFieldsV0_41 {
+    fn from(value: HttpEventFieldsV0_39) -> Self {
+        Self {
+            sensor: value.sensor,
+            end_time: value.end_time,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            method: value.method,
+            host: value.host,
+            uri: value.uri,
+            referer: value.referer,
+            version: value.version,
+            user_agent: value.user_agent,
+            request_len: value.request_len,
+            response_len: value.response_len,
+            status_code: value.status_code,
+            status_msg: value.status_msg,
+            username: value.username,
+            password: value.password,
+            cookie: value.cookie,
+            content_encoding: value.content_encoding,
+            content_type: value.content_type,
+            cache_control: value.cache_control,
+            orig_filenames: value.orig_filenames,
+            orig_mime_types: value.orig_mime_types,
+            resp_filenames: value.resp_filenames,
+            resp_mime_types: value.resp_mime_types,
+            post_body: value.post_body,
+            state: value.state,
+            confidence: 1.0, // default value for HTTP events
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct HttpEventFieldsV0_39 {
+    pub sensor: String,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub method: String,
+    pub host: String,
+    pub uri: String,
+    pub referer: String,
+    pub version: String,
+    pub user_agent: String,
+    pub request_len: usize,
+    pub response_len: usize,
+    pub status_code: u16,
+    pub status_msg: String,
+    pub username: String,
+    pub password: String,
+    pub cookie: String,
+    pub content_encoding: String,
+    pub content_type: String,
+    pub cache_control: String,
+    pub orig_filenames: Vec<String>,
+    pub orig_mime_types: Vec<String>,
+    pub resp_filenames: Vec<String>,
+    pub resp_mime_types: Vec<String>,
+    pub post_body: Vec<u8>,
+    pub state: String,
+    pub category: EventCategory,
+}
+
+pub type RepeatedHttpSessionsFields = RepeatedHttpSessionsFieldsV0_41;
+
+impl RepeatedHttpSessionsFields {
+    #[must_use]
+    pub fn syslog_rfc5424(&self) -> String {
+        format!(
+            "category={:?} sensor={:?} src_addr={:?} src_port={:?} dst_addr={:?} dst_port={:?} proto={:?} start_time={:?} end_time={:?} confidence={:?}",
+            self.category.to_string(),
+            self.sensor,
+            self.src_addr.to_string(),
+            self.src_port.to_string(),
+            self.dst_addr.to_string(),
+            self.dst_port.to_string(),
+            self.proto.to_string(),
+            self.start_time.to_rfc3339(),
+            self.end_time.to_rfc3339(),
+            self.confidence.to_string()
+        )
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RepeatedHttpSessionsFieldsV0_41 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub confidence: f32,
+    pub category: EventCategory,
+}
+
+impl From<RepeatedHttpSessionsFieldsV0_39> for RepeatedHttpSessionsFieldsV0_41 {
+    fn from(value: RepeatedHttpSessionsFieldsV0_39) -> Self {
+        Self {
+            sensor: value.sensor,
+            src_addr: value.src_addr,
+            src_port: value.src_port,
+            dst_addr: value.dst_addr,
+            dst_port: value.dst_port,
+            proto: value.proto,
+            start_time: DateTime::UNIX_EPOCH,
+            end_time: DateTime::UNIX_EPOCH,
+            confidence: 0.3, // default value for RepeatedHttpSessions
+            category: value.category,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RepeatedHttpSessionsFieldsV0_39 {
+    pub sensor: String,
+    pub src_addr: IpAddr,
+    pub src_port: u16,
+    pub dst_addr: IpAddr,
+    pub dst_port: u16,
+    pub proto: u8,
+    pub category: EventCategory,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -90,6 +272,10 @@ pub struct RepeatedHttpSessions {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
+    #[serde(with = "ts_nanoseconds")]
+    pub start_time: DateTime<Utc>,
+    #[serde(with = "ts_nanoseconds")]
+    pub end_time: DateTime<Utc>,
     pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
@@ -121,6 +307,8 @@ impl RepeatedHttpSessions {
             dst_addr: fields.dst_addr,
             dst_port: fields.dst_port,
             proto: fields.proto,
+            start_time: fields.start_time,
+            end_time: fields.end_time,
             confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,

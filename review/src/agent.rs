@@ -312,7 +312,7 @@ impl Manager {
             }
         }
 
-        Err(anyhow!("agent \"{} of {}\" not found", app_name, host_id))
+        Err(anyhow!("agent \"{app_name} of {host_id}\" not found"))
     }
 
     /// Finds an agent running on the specified host, and returns the agent's
@@ -660,10 +660,7 @@ impl AgentManager for Manager {
         rules: &[TrafficFilterRule],
     ) -> Result<(), Error> {
         let Ok((_, channel)) = self.find_agent(host, "piglet").await else {
-            bail!(
-                "failed to update traffic filter rules to {}. Not connected.",
-                host
-            );
+            bail!("failed to update traffic filter rules to {host}. Not connected.");
         };
         channel.send_filtering_rules(rules).await?;
         Ok(())

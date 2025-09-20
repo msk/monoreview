@@ -28,6 +28,11 @@ this project adheres to
   brute force attacks.
 - Added `confidence` field to `tidbRule` GraphQL API.
 - Added `kind` field to `tidbRule` GraphQL API.
+- Added `sensor` field to GraphQL objects for detection events based on
+  multiple raw events (`PortScan`, `MultiHostPortScan`, `ExternalDdos`,
+  `RdpBruteForce`, `FtpBruteForce`, `LdapBruteForce`).
+- Added `start_time` and `end_time` fields to GraphQL objects for
+  `RepeatedHttpSessions`.
 
 ### Changed
 
@@ -58,6 +63,12 @@ this project adheres to
   `TorConnectionConn`,`LockyRansomware`, `DnsCovertChannel`, and `TorConnection`
   from `session_end_time` and `duration` to `end_time` for consistency.
 - The Agent API is not compatible with REview 0.44 and earlier versions.
+- Restricted account creation and deletion permissions to System Administrators
+  only. The `insertAccount`, `removeAccounts`, and `removeAccountsExact`
+  GraphQL mutations now require the `SystemAdministrator` role instead of
+  allowing both `SystemAdministrator` and `SecurityAdministrator` roles. This
+  enhances system security by enforcing stricter role-based access control
+  for sensitive account management operations.
 
 ### Fixed
 

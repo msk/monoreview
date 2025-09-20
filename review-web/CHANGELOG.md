@@ -27,9 +27,20 @@ this project adheres to
 - Implemented comprehensive logging for `TriageResponse` operations with detailed
   audit logs for all insert, update, remove, and retrieve operations on triage
   responses.
+- Added `sensor` field to GraphQL objects for detection events based on
+  multiple raw events (`PortScan`, `MultiHostPortScan`, `ExternalDdos`,
+  `RdpBruteForce`, `FtpBruteForce`, `LdapBruteForce`).
+- Added `start_time` and `end_time` fields to GraphQL objects for
+  `RepeatedHttpSessions`.
 
 ### Changed
 
+- Restricted account creation and deletion permissions to System Administrators
+  only. The `insertAccount`, `removeAccounts`, and `removeAccountsExact`
+  GraphQL mutations now require the `SystemAdministrator` role instead of
+  allowing both `SystemAdministrator` and `SecurityAdministrator` roles. This
+  enhances system security by enforcing stricter role-based access control
+  for sensitive account management operations.
 - Bumped Roxy version to 0.5.0 with updated `ResourceUsage` struct field names.
   The `total_disk_space` field is now calculated as `disk_used_bytes` +
   `disk_available_bytes`, and `used_disk_space` is now accessed as

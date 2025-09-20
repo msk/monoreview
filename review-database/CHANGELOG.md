@@ -23,6 +23,13 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
 - Added `find_ip_county` utility function in new `util` module.
+- Added `sensor` field to the following detection event structures:
+  - `PortScan`
+  - `MultiHostPortScan`
+  - `ExternalDdos`
+  - `RdpBruteForce`
+  - `FtpBruteForce`
+  - `LdapBruteForce`
 
 ### Changed
 
@@ -38,6 +45,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `LineSegment` and `Regression` structures are deprecated as they are no longer
   used in the codebase. They will be removed in a future version.
+
+### Fixed
+
+- Added missing migrations for `FtpPlainText` and `LdapPlainText`.
 
 ## [0.40.0] - 2025-08-13
 

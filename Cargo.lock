@@ -757,7 +757,7 @@ dependencies = [
  "bitflags 2.9.4",
  "cexpr",
  "clang-sys",
- "itertools",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "regex",
@@ -2101,6 +2101,15 @@ name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -3670,6 +3679,7 @@ dependencies = [
  "http",
  "ip2location",
  "ipnet",
+ "itertools 0.14.0",
  "jsonwebtoken",
  "num-traits",
  "reqwest",
@@ -4361,7 +4371,7 @@ dependencies = [
  "arrow",
  "chrono",
  "csv-core",
- "itertools",
+ "itertools 0.13.0",
  "num-traits",
  "ordered-float",
  "percent-encoding",
@@ -4484,7 +4494,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c8ce0ab2b5159ff3bd1ad03ac4f84d406438f1c42f1e83c0698b1c8041365ee"
 dependencies = [
  "bon",
- "itertools",
+ "itertools 0.13.0",
  "strum 0.26.3",
  "strum_macros 0.26.4",
 ]
