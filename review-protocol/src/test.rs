@@ -353,4 +353,98 @@ impl crate::server::Handler for TestServerHandler {
     async fn renew_certificate(&self, _peer: &str) -> Result<(String, String), String> {
         Ok(("new-cert".to_string(), "new-key".to_string()))
     }
+
+    async fn get_model(&self, name: &str) -> Result<Vec<u8>, String> {
+        if name == "test-model" {
+            Ok(vec![0x01, 0x02, 0x03, 0x04, 0x05])
+        } else {
+            Err("model not found".to_string())
+        }
+    }
+
+    async fn get_model_names(&self) -> Result<Vec<String>, String> {
+        Ok(vec![
+            "model1".to_string(),
+            "model2".to_string(),
+            "model3".to_string(),
+        ])
+    }
+
+    async fn insert_column_statistics(
+        &self,
+        _statistics: &[crate::types::ColumnStatisticsUpdate],
+        _model_id: i32,
+        _batch_ts: i64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn insert_model(&self, _model: &[u8]) -> Result<i32, String> {
+        Ok(42)
+    }
+
+    async fn insert_time_series(
+        &self,
+        _time_series: &[crate::types::TimeSeriesUpdate],
+        _model_id: i32,
+        _batch_ts: i64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn remove_model(&self, _name: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn update_clusters(
+        &self,
+        _input: &[crate::types::UpdateClusterRequest],
+        _model_id: i32,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn update_model(&self, _model: &[u8]) -> Result<i32, String> {
+        Ok(55)
+    }
+
+    async fn update_outliers(
+        &self,
+        _outliers: &[crate::types::OutlierInfo],
+        _model_id: i32,
+        _timestamp: i64,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn insert_event_labels(
+        &self,
+        _model_id: i32,
+        _round: u32,
+        _event_labels: &[crate::types::EventMessage],
+    ) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn insert_data_source(
+        &self,
+        _data_source: &crate::types::DataSource,
+    ) -> Result<u32, String> {
+        Ok(123)
+    }
+
+    async fn get_outliers(
+        &self,
+        model_id: i32,
+        _timestamp: i64,
+    ) -> Result<Vec<(String, Vec<i64>)>, String> {
+        if model_id == 10 {
+            Ok(vec![
+                ("sensor1".to_string(), vec![1, 2, 3]),
+                ("sensor2".to_string(), vec![4, 5, 6]),
+            ])
+        } else {
+            Ok(vec![])
+        }
+    }
 }

@@ -10,6 +10,7 @@ use ipnet::IpNet;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+pub use structured::ColumnStatistics;
 
 /// The data source key, either a numeric ID or a name.
 #[derive(Debug, Deserialize, Serialize)]
@@ -169,4 +170,100 @@ pub struct Tidb {
 pub enum Status {
     Ready,
     Idle,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ColumnStatisticsUpdate {
+    pub cluster_id: String,
+    pub column_statistics: Vec<ColumnStatistics>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TimeCount {
+    pub time: chrono::NaiveDateTime,
+    pub count: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TimeSeries {
+    pub count_index: Option<usize>,
+    pub series: Vec<TimeCount>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TimeSeriesUpdate {
+    pub cluster_id: String,
+    pub time_series: Vec<TimeSeries>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct UpdateClusterRequest {
+    pub cluster_id: String,
+    pub detector_id: i32,
+    pub signature: String,
+    pub score: Option<f64>,
+    pub size: i64,
+    pub event_ids: Vec<(i64, String)>,
+    pub status_id: i32,
+    pub labels: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct OutlierInfo {
+    pub id: i64,
+    pub rank: i64,
+    pub distance: f64,
+    pub sensor: String,
+}
+
+#[derive(Serialize, Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[allow(clippy::module_name_repetitions)]
+pub enum EventKind {
+    DnsCovertChannel,
+    HttpThreat,
+    RdpBruteForce,
+    RepeatedHttpSessions,
+    ExtraThreat,
+    TorConnection,
+    DomainGenerationAlgorithm,
+    FtpBruteForce,
+    FtpPlainText,
+    PortScan,
+    MultiHostPortScan,
+    NonBrowser,
+    LdapBruteForce,
+    LdapPlainText,
+    ExternalDdos,
+    CryptocurrencyMiningPool,
+    BlocklistConn,
+    BlocklistDns,
+    BlocklistDceRpc,
+    BlocklistFtp,
+    BlocklistHttp,
+    BlocklistKerberos,
+    BlocklistLdap,
+    BlocklistMqtt,
+    BlocklistNfs,
+    BlocklistNtlm,
+    BlocklistRdp,
+    BlocklistSmb,
+    BlocklistSmtp,
+    BlocklistSsh,
+    BlocklistTls,
+    WindowsThreat,
+    NetworkThreat,
+    LockyRansomware,
+    SuspiciousTlsTraffic,
+    BlocklistBootp,
+    BlocklistDhcp,
+    TorConnectionConn,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct EventMessage {
+    #[serde(with = "chrono::serde::ts_nanoseconds")]
+    pub time: chrono::DateTime<chrono::Utc>,
+    pub kind: EventKind,
+    #[serde(with = "serde_bytes")]
+    pub fields: Vec<u8>,
 }

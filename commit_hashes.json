@@ -1,8 +1,8 @@
 {
-  "generated_at": "2025-09-20T08:42:49-07:00",
+  "generated_at": "2025-09-25T14:00:46-07:00",
   "repositories": {
     "git@github.com:petabi/review.git": {
-      "commit_hash": "82022d0a2ba2ae4a88c841b53529e811a142c2a9",
+      "commit_hash": "b61c0a3b2f247d51f0143b86887e5005f582ca0c",
       "package_name": "review",
       "directory": "review",
       "repo_type": "main"
@@ -24,11 +24,11 @@
       "specified_tag": "0.2.1"
     },
     "https://github.com/petabi/review-protocol.git": {
-      "commit_hash": "fd5ccf1a91560de3452a595737ea03f79a9d08e5",
+      "commit_hash": "2c948dbb6c1ea21c2ff950a40160a26fbbec738e",
       "package_name": "review-protocol",
       "directory": "review-protocol",
       "repo_type": "dependency",
-      "specified_rev": "fd5ccf1",
+      "specified_rev": "2c948db",
       "specified_tag": null
     },
     "https://github.com/petabi/oinq.git": {

@@ -3,38 +3,16 @@
 use std::collections::HashSet;
 
 use anyhow::{Context, Result, anyhow};
-use bincode::Options;
 use chrono::DateTime;
-use num_enum::FromPrimitive;
 use quinn::{RecvStream, SendStream};
 use review_database::{
-    self as database, ColumnStatisticsUpdate, DataSource, EventMessage, Model, OutlierInfo, Store,
-    Tidb, TimeSeriesUpdate, UpdateClusterRequest, event::Direction,
+    self as database, DataSource, EventMessage, Model, OutlierInfo, Store, Tidb,
+    UpdateClusterRequest, event::Direction,
 };
 use review_protocol::{server::Handler, types as protocol};
-use serde::Deserialize;
 use tracing::{error, warn};
 
 use super::Manager;
-
-#[derive(FromPrimitive)]
-#[repr(u32)]
-enum RequestCode {
-    GetModel = 3,
-    InsertColumnStatistics = 5,
-    InsertModel = 6,
-    InsertTimeSeries = 7,
-    RemoveModel = 8,
-    UpdateClusters = 10,
-    UpdateModel = 11,
-    UpdateOutliers = 12,
-    InsertEventLabels = 13,
-    InsertDataSource = 20,
-    GetOutliers = 25,
-    /// Unknown request
-    #[num_enum(default)]
-    Unknown = u32::MAX,
-}
 
 const DEFAULT_SAVED: bool = false;
 
@@ -174,139 +152,262 @@ impl Handler for Manager {
             .await
             .map_err(|e| e.to_string())
     }
+
+    async fn get_model(&self, name: &str) -> Result<Vec<u8>, String> {
+        let model = self
+            .db
+            .load_model_by_name(name)
+            .await
+            .map_err(|e| format!("Failed to load model: {e}"))?;
+        model
+            .into_serialized()
+            .map_err(|e| format!("Failed to serialize model: {e}"))
+    }
+
+    async fn insert_column_statistics(
+        &self,
+        statistics: &[protocol::ColumnStatisticsUpdate],
+        model_id: i32,
+        batch_ts: i64,
+    ) -> Result<(), String> {
+        use std::collections::HashMap;
+
+        let names = statistics
+            .iter()
+            .map(|stat| stat.cluster_id.as_str())
+            .collect::<Vec<_>>();
+        let cluster_id_map = self
+            .db
+            .cluster_name_to_ids(model_id, &names)
+            .await
+            .map_err(|e| format!("Failed to get cluster IDs: {e}"))?
+            .into_iter()
+            .map(|(id, name)| (name, id))
+            .collect::<HashMap<_, _>>();
+        let batch_ts = DateTime::from_timestamp_nanos(batch_ts).naive_utc();
+        let store = self.store.read().await;
+        let cstat = store.column_stats_map();
+
+        let stats = statistics
+            .iter()
+            .filter_map(|stat| {
+                cluster_id_map.get(&stat.cluster_id).and_then(|&cid| {
+                    u32::try_from(cid).ok().map(|cid_u32| {
+                        let column_stats =
+                            super::proto2db_column_statistics(&stat.column_statistics);
+                        (cid_u32, column_stats)
+                    })
+                })
+            })
+            .collect();
+        cstat
+            .insert_column_statistics(stats, model_id, batch_ts)
+            .map_err(|e| format!("Failed to insert column statistics: {e}"))?;
+        Ok(())
+    }
+
+    async fn insert_model(&self, model_bytes: &[u8]) -> Result<i32, String> {
+        use review_database::{BatchInfo, Scores};
+
+        let model = Model::from_serialized(model_bytes)
+            .map_err(|e| format!("Failed to deserialize model: {e}"))?;
+        let id = self
+            .db
+            .add_model(&model)
+            .await
+            .map_err(|e| format!("Failed to add model: {e}"))?;
+        self.with_store(|store| {
+            for batch in model.batch_info {
+                let record = BatchInfo {
+                    model: id,
+                    inner: batch.clone(),
+                };
+                store.batch_info_map().insert(&record)?;
+            }
+            let record = Scores::new(id, model.scores.clone());
+            store.scores_map().insert(&record)
+        })
+        .await
+        .map_err(|e| format!("Failed to store model info: {e}"))?;
+        Ok(id)
+    }
+
+    async fn insert_time_series(
+        &self,
+        time_series: &[protocol::TimeSeriesUpdate],
+        model_id: i32,
+        batch_ts: i64,
+    ) -> Result<(), String> {
+        let batch_ts = DateTime::from_timestamp_nanos(batch_ts).naive_utc();
+
+        let db_time_series = super::proto2db_time_series_updates(time_series)
+            .map_err(|e| format!("Failed to convert time series: {e}"))?;
+
+        self.db
+            .add_time_series(db_time_series, model_id, batch_ts)
+            .await
+            .map_err(|e| format!("Failed to add time series: {e}"))?;
+        Ok(())
+    }
+
+    async fn remove_model(&self, name: &str) -> Result<(), String> {
+        let id = self
+            .db
+            .delete_model(name)
+            .await
+            .map_err(|e| format!("Failed to delete model: {e}"))?;
+        self.with_store(|store| {
+            store.batch_info_map().delete_all_for(id)?;
+            store.scores_map().delete(id)
+        })
+        .await
+        .map_err(|e| format!("Failed to remove model info: {e}"))?;
+        Ok(())
+    }
+
+    async fn update_clusters(
+        &self,
+        input: &[protocol::UpdateClusterRequest],
+        model_id: i32,
+    ) -> Result<(), String> {
+        let db_input: Vec<UpdateClusterRequest> = input
+            .iter()
+            .map(super::proto2db_update_cluster_request)
+            .collect();
+        self.db
+            .update_clusters(db_input, model_id)
+            .await
+            .map_err(|e| format!("Failed to update clusters: {e}"))?;
+        Ok(())
+    }
+
+    async fn update_model(&self, model_bytes: &[u8]) -> Result<i32, String> {
+        use review_database::{BatchInfo, Scores};
+
+        let model = Model::from_serialized(model_bytes)
+            .map_err(|e| format!("Failed to deserialize model: {e}"))?;
+        let model_id = self
+            .db
+            .update_model(&model)
+            .await
+            .map_err(|e| format!("Failed to update model: {e}"))?;
+        self.with_store(|store| {
+            for batch in model.batch_info {
+                let record = BatchInfo {
+                    model: model_id,
+                    inner: batch.clone(),
+                };
+                store.batch_info_map().put(&record)?;
+            }
+            let record = Scores::new(model_id, model.scores.clone());
+            store.scores_map().put(&record)
+        })
+        .await
+        .map_err(|e| format!("Failed to store model info: {e}"))?;
+        Ok(model_id)
+    }
+
+    async fn update_outliers(
+        &self,
+        outliers: &[protocol::OutlierInfo],
+        model_id: i32,
+        timestamp: i64,
+    ) -> Result<(), String> {
+        let db_outliers = outliers
+            .iter()
+            .map(|proto| super::proto2db_outlier_info(proto, model_id, timestamp, DEFAULT_SAVED))
+            .collect::<Vec<_>>();
+
+        self.with_store(|store| {
+            let retention_cutoff = jiff::Timestamp::now()
+                .checked_sub(
+                    jiff::Span::new()
+                        .seconds(crate::config::DEFAULT_OUTLIER_RETENTION * 24 * 60 * 60),
+                )
+                .context("failed to calculate retention cutoff")?
+                .as_nanosecond()
+                .try_into()
+                .context("retention cutoff timestamp out of range")?;
+            clean_up_outliers(store, model_id, retention_cutoff)?;
+            update_outliers(store, &db_outliers)
+        })
+        .await
+        .map_err(|e| format!("Failed to update outliers: {e}"))
+    }
+
+    async fn insert_event_labels(
+        &self,
+        _model_id: i32,
+        _round: u32,
+        event_labels: &[protocol::EventMessage],
+    ) -> Result<(), String> {
+        let db_event_labels: Vec<EventMessage> = event_labels
+            .iter()
+            .map(super::proto2db_event_message)
+            .collect();
+
+        self.with_store(|store| {
+            for event in &db_event_labels {
+                if let Err(e) = store.events().put(event) {
+                    error!("{e:?}");
+                }
+            }
+            Ok(())
+        })
+        .await
+        .map_err(|e| format!("Failed to insert event labels: {e}"))?;
+
+        for event in db_event_labels {
+            if let Err(e) = self.syslog_tx.send(event).await {
+                warn!("syslog error: {e}");
+            }
+        }
+        Ok(())
+    }
+
+    async fn insert_data_source(&self, data_source: &protocol::DataSource) -> Result<u32, String> {
+        let db_data_source = super::proto2db_data_source(data_source);
+        self.with_store(|store| {
+            insert_data_source(store, &db_data_source).context(format!(
+                "failed to insert data source {}",
+                db_data_source.name
+            ))
+        })
+        .await
+        .map_err(|e| format!("{e}"))
+    }
+
+    async fn get_outliers(
+        &self,
+        model_id: i32,
+        timestamp: i64,
+    ) -> Result<Vec<(String, Vec<i64>)>, String> {
+        self.with_store(|store| {
+            let map = store.outlier_map();
+            let mut outliers = std::collections::HashMap::new();
+
+            for res in map.get(model_id, Some(timestamp), Direction::Forward, None) {
+                let outlier = res?;
+                let e = outliers.entry(outlier.sensor).or_insert(vec![]);
+                e.push(outlier.id);
+            }
+
+            Ok(outliers.into_iter().collect::<Vec<_>>())
+        })
+        .await
+        .map_err(|e| format!("Failed to get outliers: {e}"))
+    }
 }
 
 impl Manager {
-    #[allow(clippy::too_many_lines)]
     pub(super) async fn handle_request(
         mut self,
         mut send: SendStream,
         mut recv: RecvStream,
         peer: String,
     ) -> Result<()> {
-        let codec = bincode::DefaultOptions::new();
-        loop {
-            let Some((code, body)) =
-                review_protocol::server::handle(&mut self, &mut send, &mut recv, &peer).await?
-            else {
-                break;
-            };
-
-            match RequestCode::from_primitive(code) {
-                RequestCode::GetModel => {
-                    let name = codec
-                        .deserialize::<&str>(&body)
-                        .context("invalid argument")?;
-                    self.get_model(name, &mut send).await
-                }
-                RequestCode::InsertColumnStatistics => {
-                    let (statistics, model_id, batch_ts) = codec
-                        .deserialize::<(Vec<ColumnStatisticsUpdate>, i32, i64)>(&body)
-                        .context("invalid argument")?;
-                    self.insert_column_statistics(statistics, model_id, batch_ts, &mut send)
-                        .await
-                }
-                RequestCode::InsertModel => {
-                    let body = codec
-                        .deserialize::<Vec<u8>>(&body)
-                        .context("invalid argument")?;
-                    let model = Model::from_serialized(&body).context("invalid argument")?;
-                    self.insert_model(model, &mut send).await
-                }
-                RequestCode::InsertTimeSeries => {
-                    let (time_series, model_id, batch_ts) = codec
-                        .deserialize::<(Vec<TimeSeriesUpdate>, i32, i64)>(&body)
-                        .context("invalid argument")?;
-                    self.insert_time_series(time_series, model_id, batch_ts, &mut send)
-                        .await
-                }
-                RequestCode::RemoveModel => {
-                    let name = codec
-                        .deserialize::<&str>(&body)
-                        .context("invalid argument")?;
-                    self.remove_model(name, &mut send).await
-                }
-                RequestCode::UpdateClusters => {
-                    let (input, model_id) = codec
-                        .deserialize::<(Vec<UpdateClusterRequest>, i32)>(&body)
-                        .context("invalid argument")?;
-                    self.update_clusters(input, model_id, &mut send).await
-                }
-                RequestCode::UpdateModel => {
-                    let body = codec
-                        .deserialize::<Vec<u8>>(&body)
-                        .context("invalid argument")?;
-                    let model = Model::from_serialized(&body).context("invalid argument")?;
-                    self.update_model(model, &mut send).await
-                }
-                RequestCode::UpdateOutliers => {
-                    #[derive(Deserialize)]
-                    struct OutlierAbstract {
-                        id: i64,
-                        rank: i64,
-                        distance: f64,
-                        sensor: String,
-                    }
-                    let (outliers, model_id, timestamp) = codec
-                        .deserialize::<(Vec<OutlierAbstract>, i32, i64)>(&body)
-                        .context("invalid argument")?;
-                    let outliers = outliers
-                        .into_iter()
-                        .map(|input| OutlierInfo {
-                            model_id,
-                            timestamp,
-                            rank: input.rank,
-                            id: input.id,
-                            sensor: input.sensor,
-                            distance: input.distance,
-                            is_saved: DEFAULT_SAVED,
-                        })
-                        .collect();
-                    self.update_outliers(model_id, outliers, &mut send).await
-                }
-                RequestCode::InsertEventLabels => {
-                    let (_model_id, _round, event_labels) = codec
-                        .deserialize::<(i32, u32, Vec<EventMessage>)>(&body)
-                        .context("invalid argument")?;
-                    self.insert_event_labels(event_labels, &mut send).await
-                }
-                RequestCode::InsertDataSource => {
-                    let data_source = codec
-                        .deserialize::<DataSource>(&body)
-                        .context("invalid argument")?;
-                    self.insert_data_source(&data_source, &mut send).await
-                }
-                RequestCode::GetOutliers => {
-                    let (model_id, timestamp) = codec
-                        .deserialize::<(i32, i64)>(&body)
-                        .context("invalid argument")?;
-                    self.get_outliers(model_id, timestamp, &mut send).await
-                }
-                #[cfg(feature = "web")]
-                _ => {
-                    let mut buf = Vec::new();
-                    super::send(
-                        &mut send,
-                        &mut buf,
-                        Err("unknown request code".to_string()) as Result<(), String>,
-                    )
-                    .await
-                    .context("failed to send error message")?;
-                    Ok(())
-                }
-                #[cfg(not(feature = "web"))]
-                _ => Ok(()),
-            }?;
-        }
+        review_protocol::server::handle(&mut self, &mut send, &mut recv, &peer).await?;
         Ok(())
-    }
-
-    async fn get_model(&self, name: &str, send: &mut SendStream) -> Result<()> {
-        handle_with_response(send, "get_model", || async {
-            let model = self.db.load_model_by_name(name).await?;
-            model.into_serialized()
-        })
-        .await
     }
 
     async fn model_names(&self) -> Result<Vec<String>> {
@@ -314,222 +415,6 @@ impl Manager {
         let is_first = true;
         let models = self.db.load_models(&None, &None, is_first, limit).await?;
         Ok(models.into_iter().map(|m| m.name).collect::<Vec<_>>())
-    }
-
-    async fn get_outliers(
-        &self,
-        model_id: i32,
-        timestamp: i64,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        handle_with_response(send, "get_outliers", || async {
-            self.with_store(|store| {
-                let map = store.outlier_map();
-                let mut outliers = std::collections::HashMap::new();
-
-                for res in map.get(model_id, Some(timestamp), Direction::Forward, None) {
-                    let outlier = res?;
-                    let e = outliers.entry(outlier.sensor).or_insert(vec![]);
-                    e.push(outlier.id);
-                }
-
-                Ok(outliers.into_iter().collect::<Vec<_>>())
-            })
-            .await
-        })
-        .await
-    }
-
-    async fn insert_column_statistics(
-        &self,
-        statistics: Vec<ColumnStatisticsUpdate>,
-        model_id: i32,
-        batch_ts: i64,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        use std::collections::HashMap;
-
-        handle_with_response(send, "insert_column_statistics", || async {
-            let names = statistics
-                .iter()
-                .map(|stat| stat.cluster_id.as_str())
-                .collect::<Vec<_>>();
-            let cluster_id_map = self
-                .db
-                .cluster_name_to_ids(model_id, &names)
-                .await?
-                .into_iter()
-                .map(|(id, name)| (name, id))
-                .collect::<HashMap<_, _>>();
-            let batch_ts = DateTime::from_timestamp_nanos(batch_ts).naive_utc();
-            let store = self.store.read().await;
-            let cstat = store.column_stats_map();
-
-            let stats = statistics
-                .into_iter()
-                .filter_map(|stat| {
-                    cluster_id_map.get(&stat.cluster_id).map(|&cid| {
-                        (
-                            u32::try_from(cid).expect("cluster ID out of range"),
-                            stat.column_statistics,
-                        )
-                    })
-                })
-                .collect();
-            cstat.insert_column_statistics(stats, model_id, batch_ts)
-        })
-        .await
-    }
-
-    async fn insert_model(&self, model: Model, send: &mut SendStream) -> Result<()> {
-        use review_database::{BatchInfo, Scores};
-
-        handle_with_response(send, "insert_model", || async {
-            let id = self.db.add_model(&model).await?;
-            self.with_store(|store| {
-                for batch in model.batch_info {
-                    let record = BatchInfo {
-                        model: id,
-                        inner: batch.clone(),
-                    };
-                    store.batch_info_map().insert(&record)?;
-                }
-                let record = Scores::new(id, model.scores.clone());
-                store.scores_map().insert(&record)
-            })
-            .await?;
-            Ok(id)
-        })
-        .await
-    }
-
-    async fn insert_time_series(
-        &self,
-        time_series: Vec<TimeSeriesUpdate>,
-        model_id: i32,
-        batch_ts: i64,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        handle_with_response(send, "insert_time_series", || async {
-            let batch_ts = DateTime::from_timestamp_nanos(batch_ts).naive_utc();
-            self.db
-                .add_time_series(time_series, model_id, batch_ts)
-                .await
-        })
-        .await
-    }
-
-    async fn remove_model(&self, name: &str, send: &mut SendStream) -> Result<()> {
-        handle_with_response(send, "remove_model", || async {
-            let id = self.db.delete_model(name).await?;
-            self.with_store(|store| {
-                store.batch_info_map().delete_all_for(id)?;
-                store.scores_map().delete(id)
-            })
-            .await
-        })
-        .await
-    }
-
-    async fn update_clusters(
-        &self,
-        input: Vec<UpdateClusterRequest>,
-        model_id: i32,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        handle_with_response(send, "update_clusters", || async {
-            Ok(self.db.update_clusters(input, model_id).await?)
-        })
-        .await
-    }
-
-    async fn update_model(&self, model: Model, send: &mut SendStream) -> Result<()> {
-        use review_database::{BatchInfo, Scores};
-
-        handle_with_response(send, "update_model", || async {
-            let model_id = self.db.update_model(&model).await?;
-            self.with_store(|store| {
-                for batch in model.batch_info {
-                    let record = BatchInfo {
-                        model: model_id,
-                        inner: batch.clone(),
-                    };
-                    store.batch_info_map().put(&record)?;
-                }
-                let record = Scores::new(model_id, model.scores.clone());
-                store.scores_map().put(&record)
-            })
-            .await?;
-            Ok(model_id)
-        })
-        .await
-    }
-
-    async fn update_outliers(
-        &self,
-        model_id: i32,
-        outliers: Vec<OutlierInfo>,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        handle_with_response(send, "update_outliers", || async {
-            self.with_store(|store| {
-                let retention_cutoff = jiff::Timestamp::now()
-                    .checked_sub(
-                        jiff::Span::new()
-                            .seconds(crate::config::DEFAULT_OUTLIER_RETENTION * 24 * 60 * 60),
-                    )
-                    .context("failed to calculate retention cutoff")?
-                    .as_nanosecond()
-                    .try_into()
-                    .context("retention cutoff timestamp out of range")?;
-                clean_up_outliers(store, model_id, retention_cutoff)?;
-
-                update_outliers(store, &outliers)
-            })
-            .await
-        })
-        .await
-    }
-
-    async fn insert_event_labels(
-        &self,
-        event_labels: Vec<EventMessage>,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        handle_with_response(send, "insert_event_labels", || async {
-            self.with_store(|store| {
-                for event in &event_labels {
-                    if let Err(e) = store.events().put(event) {
-                        error!("{e:?}");
-                    }
-                }
-                Ok(())
-            })
-            .await?;
-
-            for event in event_labels {
-                if let Err(e) = self.syslog_tx.send(event).await {
-                    warn!("syslog error: {e}");
-                }
-            }
-            Ok(())
-        })
-        .await
-    }
-
-    async fn insert_data_source(
-        &self,
-        data_source: &DataSource,
-        send: &mut SendStream,
-    ) -> Result<()> {
-        handle_with_response(send, "insert_data_source", || async {
-            self.with_store(|store| {
-                insert_data_source(store, data_source)
-                    .context(format!("failed to insert data source {}", data_source.name))
-            })
-            .await
-        })
-        .await
     }
 
     async fn renew_certificate(&self, peer_key: &str) -> Result<(String, String)> {
@@ -599,27 +484,6 @@ impl Manager {
         let store = self.store.read().await;
         operation(&store).map_err(|e| e.context("database error"))
     }
-}
-
-async fn handle_with_response<T, F, Fut>(
-    send: &mut SendStream,
-    request_name: &str,
-    handler: F,
-) -> Result<()>
-where
-    F: FnOnce() -> Fut,
-    Fut: Future<Output = Result<T>>,
-    T: serde::Serialize,
-{
-    let mut buf = Vec::new();
-    let result = handler().await.map_err(|e| {
-        error!("Failed to handle {request_name} request: {e}");
-        format!("{e:#}")
-    });
-
-    super::send(send, &mut buf, result)
-        .await
-        .context("failed to send response")
 }
 
 fn get_data_source(store: &Store, key: &protocol::DataSourceKey) -> Result<Option<DataSource>> {

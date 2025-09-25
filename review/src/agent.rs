@@ -10,10 +10,9 @@ use futures::{
     Stream, StreamExt,
     task::{Context, Poll},
 };
-use quinn::{Endpoint, Incoming, RecvStream, SendStream};
+use quinn::{Endpoint, Incoming, RecvStream};
 use review_database::{AgentStatus, Database, EventMessage, Store, UniqueKey};
 use review_protocol::{server::Connection, types::Status};
-use serde::Serialize;
 use tokio::{
     sync::{Notify, RwLock, mpsc},
     task::JoinHandle,
@@ -816,22 +815,6 @@ async fn recv_raw(recv: &mut RecvStream, buf: &mut Vec<u8>) -> io::Result<()> {
         .map_err(from_read_exact_error_to_io_error)
 }
 
-async fn send<T>(send: &mut SendStream, buf: &mut Vec<u8>, msg: T) -> io::Result<()>
-where
-    T: Serialize,
-{
-    buf.resize(std::mem::size_of::<u32>(), 0);
-    bincode::DefaultOptions::new()
-        .serialize_into(&mut *buf, &msg)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    let len =
-        u32::try_from(buf.len() - 4).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    buf[..std::mem::size_of::<u32>()].clone_from_slice(&len.to_be_bytes());
-    send.write_all(buf).await?;
-    buf.clear();
-    Ok(())
-}
-
 fn from_read_exact_error_to_io_error(e: quinn::ReadExactError) -> io::Error {
     match e {
         quinn::ReadExactError::FinishedEarly(_) => io::Error::from(io::ErrorKind::UnexpectedEof),
@@ -848,6 +831,115 @@ fn db2proto_host_network_group(
         hosts: db.hosts().to_vec(),
         networks: db.networks().to_vec(),
         ip_ranges: db.ip_ranges().to_vec(),
+    }
+}
+
+pub(super) fn proto2db_outlier_info(
+    proto: &review_protocol::types::OutlierInfo,
+    model_id: i32,
+    timestamp: i64,
+    is_saved: bool,
+) -> review_database::OutlierInfo {
+    review_database::OutlierInfo {
+        model_id,
+        timestamp,
+        rank: proto.rank,
+        id: proto.id,
+        sensor: proto.sensor.clone(),
+        distance: proto.distance,
+        is_saved,
+    }
+}
+
+pub(super) fn proto2db_event_message(
+    proto: &review_protocol::types::EventMessage,
+) -> review_database::EventMessage {
+    use review_database::EventKind;
+
+    // Convert protocol EventKind to database EventKind
+    let kind = match proto.kind {
+        review_protocol::types::EventKind::DnsCovertChannel => EventKind::DnsCovertChannel,
+        review_protocol::types::EventKind::HttpThreat => EventKind::HttpThreat,
+        review_protocol::types::EventKind::RdpBruteForce => EventKind::RdpBruteForce,
+        review_protocol::types::EventKind::RepeatedHttpSessions => EventKind::RepeatedHttpSessions,
+        review_protocol::types::EventKind::ExtraThreat => EventKind::ExtraThreat,
+        review_protocol::types::EventKind::TorConnection => EventKind::TorConnection,
+        review_protocol::types::EventKind::DomainGenerationAlgorithm => {
+            EventKind::DomainGenerationAlgorithm
+        }
+        review_protocol::types::EventKind::FtpBruteForce => EventKind::FtpBruteForce,
+        review_protocol::types::EventKind::FtpPlainText => EventKind::FtpPlainText,
+        review_protocol::types::EventKind::PortScan => EventKind::PortScan,
+        review_protocol::types::EventKind::MultiHostPortScan => EventKind::MultiHostPortScan,
+        review_protocol::types::EventKind::NonBrowser => EventKind::NonBrowser,
+        review_protocol::types::EventKind::LdapBruteForce => EventKind::LdapBruteForce,
+        review_protocol::types::EventKind::LdapPlainText => EventKind::LdapPlainText,
+        review_protocol::types::EventKind::ExternalDdos => EventKind::ExternalDdos,
+        review_protocol::types::EventKind::CryptocurrencyMiningPool => {
+            EventKind::CryptocurrencyMiningPool
+        }
+        review_protocol::types::EventKind::BlocklistConn => EventKind::BlocklistConn,
+        review_protocol::types::EventKind::BlocklistDns => EventKind::BlocklistDns,
+        review_protocol::types::EventKind::BlocklistDceRpc => EventKind::BlocklistDceRpc,
+        review_protocol::types::EventKind::BlocklistFtp => EventKind::BlocklistFtp,
+        review_protocol::types::EventKind::BlocklistHttp => EventKind::BlocklistHttp,
+        review_protocol::types::EventKind::BlocklistKerberos => EventKind::BlocklistKerberos,
+        review_protocol::types::EventKind::BlocklistLdap => EventKind::BlocklistLdap,
+        review_protocol::types::EventKind::BlocklistMqtt => EventKind::BlocklistMqtt,
+        review_protocol::types::EventKind::BlocklistNfs => EventKind::BlocklistNfs,
+        review_protocol::types::EventKind::BlocklistNtlm => EventKind::BlocklistNtlm,
+        review_protocol::types::EventKind::BlocklistRdp => EventKind::BlocklistRdp,
+        review_protocol::types::EventKind::BlocklistSmb => EventKind::BlocklistSmb,
+        review_protocol::types::EventKind::BlocklistSmtp => EventKind::BlocklistSmtp,
+        review_protocol::types::EventKind::BlocklistSsh => EventKind::BlocklistSsh,
+        review_protocol::types::EventKind::BlocklistTls => EventKind::BlocklistTls,
+        review_protocol::types::EventKind::WindowsThreat => EventKind::WindowsThreat,
+        review_protocol::types::EventKind::NetworkThreat => EventKind::NetworkThreat,
+        review_protocol::types::EventKind::LockyRansomware => EventKind::LockyRansomware,
+        review_protocol::types::EventKind::SuspiciousTlsTraffic => EventKind::SuspiciousTlsTraffic,
+        review_protocol::types::EventKind::BlocklistBootp => EventKind::BlocklistBootp,
+        review_protocol::types::EventKind::BlocklistDhcp => EventKind::BlocklistDhcp,
+        review_protocol::types::EventKind::TorConnectionConn => EventKind::TorConnectionConn,
+    };
+
+    review_database::EventMessage {
+        time: proto.time,
+        kind,
+        fields: proto.fields.clone(),
+    }
+}
+
+pub(super) fn proto2db_data_source(
+    proto: &review_protocol::types::DataSource,
+) -> review_database::DataSource {
+    review_database::DataSource {
+        id: proto.id,
+        name: proto.name.clone(),
+        server_name: proto.server_name.clone(),
+        address: proto.address,
+        data_type: match proto.data_type {
+            review_protocol::types::DataType::Csv => review_database::DataType::Csv,
+            review_protocol::types::DataType::Log => review_database::DataType::Log,
+            review_protocol::types::DataType::TimeSeries => review_database::DataType::TimeSeries,
+        },
+        source: proto.source.clone(),
+        kind: proto.kind.clone(),
+        description: proto.description.clone(),
+    }
+}
+
+pub(super) fn proto2db_update_cluster_request(
+    proto: &review_protocol::types::UpdateClusterRequest,
+) -> review_database::UpdateClusterRequest {
+    review_database::UpdateClusterRequest {
+        cluster_id: proto.cluster_id.clone(),
+        detector_id: proto.detector_id,
+        signature: proto.signature.clone(),
+        score: proto.score,
+        size: proto.size,
+        event_ids: proto.event_ids.clone(),
+        status_id: proto.status_id,
+        labels: proto.labels.clone(),
     }
 }
 
@@ -886,4 +978,44 @@ fn web2proto_sampling_policy(
         node: policy.node.clone(),
         column: policy.column,
     }
+}
+
+/// Converts protocol `ColumnStatistics` to structured `ColumnStatistics`
+pub(super) fn proto2db_column_statistics(
+    proto_stats: &[review_protocol::types::ColumnStatistics],
+) -> Vec<structured::ColumnStatistics> {
+    proto_stats
+        .iter()
+        .map(|proto| {
+            // Direct field mapping conversion
+            structured::ColumnStatistics {
+                description: proto.description.clone(),
+                n_largest_count: proto.n_largest_count.clone(),
+            }
+        })
+        .collect()
+}
+
+/// Converts protocol `TimeSeriesUpdate` to database `TimeSeriesUpdate`
+pub(super) fn proto2db_time_series_updates(
+    proto_updates: &[review_protocol::types::TimeSeriesUpdate],
+) -> Result<Vec<review_database::TimeSeriesUpdate>, String> {
+    // We assume that the types are identical. This is temporary until
+    // review-database-0.41.0, where it uses a different type for time series.
+    use bincode::Options;
+
+    let codec = bincode::DefaultOptions::new();
+
+    proto_updates
+        .iter()
+        .map(|proto| {
+            // Use bincode for efficient conversion between compatible types
+            let serialized = codec
+                .serialize(proto)
+                .map_err(|e| format!("Failed to serialize time series update: {e}"))?;
+            codec
+                .deserialize(&serialized)
+                .map_err(|e| format!("Failed to deserialize time series update: {e}"))
+        })
+        .collect()
 }

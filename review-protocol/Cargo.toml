@@ -8,7 +8,9 @@ client = [ "async-trait", "bincode", "oinq", "quinn", "rustls", "rustls-pemfile"
 server = [ "async-trait", "anyhow", "bincode", "oinq", "quinn", "semver", "thiserror",]
 
 [dependencies]
+serde_bytes = "0.11.19"
 serde_repr = "0.1.19"
+structured = "0.15.0"
 
 [dev-dependencies]
 rcgen = "0.13"
@@ -24,6 +26,11 @@ optional = true
 [dependencies.bincode]
 version = "1"
 optional = true
+
+[dependencies.chrono]
+version = ">=0.4.35,<0.4.40"
+default-features = false
+features = [ "serde",]
 
 [dependencies.ipnet]
 version = "2"

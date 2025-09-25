@@ -7,6 +7,41 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- The following client-side APIs to send requests to the server:
+  - `Connection::get_model`
+  - `Connection::get_model_names`
+  - `Connection::insert_column_statistics`
+  - `Connection::insert_model`
+  - `Connection::insert_time_series`
+  - `Connection::remove_model`
+  - `Connection::update_clusters`
+  - `Connection::update_model`
+  - `Connection::update_outliers`
+  - `Connection::insert_event_labels`
+  - `Connection::insert_data_source`
+  - `Connection::get_outliers`
+- The following server-side APIs to handle requests from clients:
+  - `Handler::get_model`
+  - `Handler::get_model_names`
+  - `Handler::insert_column_statistics`
+  - `Handler::insert_model`
+  - `Handler::insert_time_series`
+  - `Handler::remove_model`
+  - `Handler::update_clusters`
+  - `Handler::update_model`
+  - `Handler::update_outliers`
+  - `Handler::insert_event_labels`
+  - `Handler::insert_data_source`
+  - `Handler::get_outliers`
+- New types for machine learning and data processing:
+  - `ColumnStatistics`, `ColumnStatisticsUpdate`
+  - `TimeCount`, `TimeSeries`, `TimeSeriesUpdate`
+  - `UpdateClusterRequest`
+  - `OutlierInfo`
+  - `EventMessage`
+
 ### Changed
 
 - `server::Handler::handle` requires the `peer` argument, which uniquely
