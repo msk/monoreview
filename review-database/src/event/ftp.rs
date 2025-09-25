@@ -193,12 +193,12 @@ impl Match for FtpBruteForce {
         "ftp brute force"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -454,7 +454,7 @@ impl Match for FtpPlainText {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -488,6 +488,7 @@ pub struct BlocklistFtp {
     pub file: String,
     pub file_size: u64,
     pub file_id: String,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -544,6 +545,7 @@ impl BlocklistFtp {
             file: fields.file,
             file_size: fields.file_size,
             file_id: fields.file_id,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -588,7 +590,7 @@ impl Match for BlocklistFtp {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

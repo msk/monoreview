@@ -272,9 +272,7 @@ pub struct RepeatedHttpSessions {
     pub dst_addr: IpAddr,
     pub dst_port: u16,
     pub proto: u8,
-    #[serde(with = "ts_nanoseconds")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "ts_nanoseconds")]
     pub end_time: DateTime<Utc>,
     pub confidence: f32,
     pub category: EventCategory,
@@ -354,7 +352,7 @@ impl Match for RepeatedHttpSessions {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -1088,7 +1086,7 @@ impl Match for NonBrowser {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

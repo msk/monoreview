@@ -999,23 +999,39 @@ pub(super) fn proto2db_column_statistics(
 /// Converts protocol `TimeSeriesUpdate` to database `TimeSeriesUpdate`
 pub(super) fn proto2db_time_series_updates(
     proto_updates: &[review_protocol::types::TimeSeriesUpdate],
-) -> Result<Vec<review_database::TimeSeriesUpdate>, String> {
-    // We assume that the types are identical. This is temporary until
-    // review-database-0.41.0, where it uses a different type for time series.
-    use bincode::Options;
-
-    let codec = bincode::DefaultOptions::new();
-
+) -> Result<Vec<(i32, Vec<review_database::ColumnTimeSeries>)>> {
     proto_updates
         .iter()
         .map(|proto| {
-            // Use bincode for efficient conversion between compatible types
-            let serialized = codec
-                .serialize(proto)
-                .map_err(|e| format!("Failed to serialize time series update: {e}"))?;
-            codec
-                .deserialize(&serialized)
-                .map_err(|e| format!("Failed to deserialize time series update: {e}"))
+            let (_, cluster_id) = proto
+                .cluster_id
+                .split_once('_')
+                .ok_or(anyhow!("invalid cluster_id"))?;
+            let cluster_id: i32 = cluster_id.parse()?;
+            let columns: Result<Vec<_>> = proto
+                .time_series
+                .iter()
+                .map(|ts| {
+                    let index = ts.count_index.map(i32::try_from).transpose()?;
+                    let time_counts: Result<Vec<_>> = ts
+                        .series
+                        .iter()
+                        .map(|tc| {
+                            let t = tc
+                                .time
+                                .and_utc()
+                                .timestamp_nanos_opt()
+                                .ok_or(anyhow!("invalid timestamp"))?;
+                            let c = usize::try_from(tc.count)?;
+                            Ok((t, c))
+                        })
+                        .collect();
+                    let time_counts = time_counts?;
+                    Ok(review_database::ColumnTimeSeries { index, time_counts })
+                })
+                .collect();
+            let columns = columns?;
+            Ok((cluster_id, columns))
         })
         .collect()
 }

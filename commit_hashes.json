@@ -1,18 +1,18 @@
 {
-  "generated_at": "2025-09-25T14:00:46-07:00",
+  "generated_at": "2025-09-25T14:03:24-07:00",
   "repositories": {
     "git@github.com:petabi/review.git": {
-      "commit_hash": "b61c0a3b2f247d51f0143b86887e5005f582ca0c",
+      "commit_hash": "a26bde7f7c666643a4dcf969987c3339051707be",
       "package_name": "review",
       "directory": "review",
       "repo_type": "main"
     },
     "https://github.com/petabi/review-database.git": {
-      "commit_hash": "955c3d9ef5606d3d4b16b46b24b9cb30729e377f",
+      "commit_hash": "2ac4429a0a71e73d0d8fcee390ca02d8b3d212c2",
       "package_name": "review-database",
       "directory": "review-database",
       "repo_type": "dependency",
-      "specified_rev": "955c3d9",
+      "specified_rev": "2ac4429",
       "specified_tag": null
     },
     "https://github.com/aicers/attrievent.git": {
@@ -40,11 +40,11 @@
       "specified_tag": "0.13.0"
     },
     "https://github.com/aicers/review-web.git": {
-      "commit_hash": "9d295d0fdee12c17e027ee05545977c4051b31ae",
+      "commit_hash": "59697e6adf69b5f25a84d8c043cc43438561ccbc",
       "package_name": "review-web",
       "directory": "review-web",
       "repo_type": "dependency",
-      "specified_rev": "9d295d0",
+      "specified_rev": "59697e6",
       "specified_tag": null
     },
     "https://github.com/aicers/roxy.git": {

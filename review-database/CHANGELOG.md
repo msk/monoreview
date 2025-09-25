@@ -22,6 +22,8 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `RepeatedHttpSessions` (default 0.3)
   - `TorConnection` (default 1.0)
   - `NonBrowser` (default 1.0)
+  - `BlocklistFtp`
+  - `BlocklistLdap`
 - Added `find_ip_county` utility function in new `util` module.
 - Added `sensor` field to the following detection event structures:
   - `PortScan`
@@ -30,6 +32,10 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   - `RdpBruteForce`
   - `FtpBruteForce`
   - `LdapBruteForce`
+- Added `start_time` and `end_time` fields to `RepeatedHttpSessions` detection
+  event structure for consistency with other multi-raw event-based detection
+  events and to provide necessary information for packet information requests
+  in the UI.
 
 ### Changed
 
@@ -40,11 +46,22 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed re-exports of event types from the crate's top level for cleaner, more
   organized API. Event types are now accessed through the `event::` module path
   instead of directly at the crate root.
+- Updated `Match` trait implementations for detection events to return actual
+  `sensor` and `confidence` field values instead of placeholders.
+- Time series data is now stored in RocksDB instead of PostgreSQL. A built-in
+  migration will automatically move existing time series data from PostgreSQL
+  to RocksDB.
+
+### Removed
+
+- Legacy PostgreSQL-based time series tables and APIs have been removed.
 
 ### Deprecated
 
 - `LineSegment` and `Regression` structures are deprecated as they are no longer
   used in the codebase. They will be removed in a future version.
+- Old helper structures (`TopTrendsByColumn`, `ClusterTrend`, `TimeCount`) are
+  deprecated and will be fully removed in the future.
 
 ### Fixed
 
@@ -75,7 +92,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 
-- Migration from version 0.39.0 and earlier is no longer supported.
+- Migration from version 0.29.0 and earlier is no longer supported.
 - `Database::insert_column_statistics` is removed. User is advised to use
   `Table<'d, ColumnStats>::insert_column_statistics`.
 - The `Indexed` trait is no longer necessary in the public API.

@@ -192,12 +192,12 @@ impl Match for LdapBruteForce {
         "ldap brute force"
     }
 
-    fn sensor(&self) -> &'static str {
-        "-"
+    fn sensor(&self) -> &str {
+        self.sensor.as_str()
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -417,7 +417,7 @@ impl Match for LdapPlainText {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {
@@ -446,6 +446,7 @@ pub struct BlocklistLdap {
     pub diagnostic_message: Vec<String>,
     pub object: Vec<String>,
     pub argument: Vec<String>,
+    pub confidence: f32,
     pub category: EventCategory,
     pub triage_scores: Option<Vec<TriageScore>>,
 }
@@ -492,6 +493,7 @@ impl BlocklistLdap {
             diagnostic_message: fields.diagnostic_message,
             object: fields.object,
             argument: fields.argument,
+            confidence: fields.confidence,
             category: fields.category,
             triage_scores: None,
         }
@@ -536,7 +538,7 @@ impl Match for BlocklistLdap {
     }
 
     fn confidence(&self) -> Option<f32> {
-        None
+        Some(self.confidence)
     }
 
     fn learning_method(&self) -> LearningMethod {

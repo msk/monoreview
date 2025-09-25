@@ -238,15 +238,15 @@ impl Handler for Manager {
         model_id: i32,
         batch_ts: i64,
     ) -> Result<(), String> {
-        let batch_ts = DateTime::from_timestamp_nanos(batch_ts).naive_utc();
-
         let db_time_series = super::proto2db_time_series_updates(time_series)
             .map_err(|e| format!("Failed to convert time series: {e}"))?;
-
-        self.db
-            .add_time_series(db_time_series, model_id, batch_ts)
-            .await
-            .map_err(|e| format!("Failed to add time series: {e}"))?;
+        self.with_store(|store| {
+            store
+                .time_series_map()
+                .add_time_series(model_id, batch_ts, db_time_series)
+        })
+        .await
+        .map_err(|e| format!("Failed to add time series: {e}"))?;
         Ok(())
     }
 
