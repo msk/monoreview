@@ -72,9 +72,9 @@ impl WebCertManager for CertManager {
         use x509_parser::prelude::parse_x509_certificate;
 
         // Validate certificate
-        let _cert_der = rustls::pki_types::CertificateDer::from_pem_slice(cert.as_bytes())
+        let cert_der = rustls::pki_types::CertificateDer::from_pem_slice(cert.as_bytes())
             .map_err(|e| TlsError::InvalidCert(format!("Invalid certificate PEM: {e}")))?;
-        let (_, x509) = parse_x509_certificate(cert.as_bytes())?;
+        let (_, x509) = parse_x509_certificate(cert_der.as_ref()).map_err(TlsError::X509Parse)?;
         if !x509.validity().is_valid() {
             anyhow::bail!("The certificate has expired or is not yet valid");
         }
