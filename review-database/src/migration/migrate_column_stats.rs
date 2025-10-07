@@ -2,12 +2,25 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, dsl::exists, select};
 use diesel_async::RunQueryDsl;
 
 use crate::{Database, column_statistics::Statistics};
 
 pub(crate) async fn run(database: &Database, store: &crate::Store) -> Result<()> {
+    use crate::schema::column_description::dsl as cd;
+    let mut conn = database.pool.get().await?;
+
+    // First check if there are any column descriptions to migrate
+    let has_records: bool = select(exists(cd::column_description.select(cd::id)))
+        .get_result(&mut conn)
+        .await?;
+
+    // No column descriptions found in PostgreSQL, skipping migration
+    if !has_records {
+        return Ok(());
+    }
+
     let models = retrieve_model_to_migrate(database).await?;
     tracing::info!(
         "Migrating column statistics for a total of {} models from PostgreSQL to RocksDb",

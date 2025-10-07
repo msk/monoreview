@@ -13,7 +13,7 @@ use crate::{
     Role, Tidb, TidbKind, TidbRule,
     account::{PasswordHashAlgorithm, SaltedPassword},
     event::{
-        BlocklistTlsFields, ExtraThreat, FilterEndpoint, FlowKind, HttpThreatFields,
+        BlocklistTlsFields, ExtraThreat, FilterEndpoint, FlowKind, HttpThreatFieldsV0_34,
         LearningMethod, NetworkThreat, TriageScore, WindowsThreat,
     },
     tables::InnerNode,
@@ -63,7 +63,7 @@ pub struct HttpThreatV0_33 {
     pub category: EventCategory,
 }
 
-impl From<HttpThreatV0_33> for HttpThreatFields {
+impl From<HttpThreatV0_33> for HttpThreatFieldsV0_34 {
     fn from(input: HttpThreatV0_33) -> Self {
         Self {
             time: input.time,

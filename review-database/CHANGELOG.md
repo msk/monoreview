@@ -5,7 +5,7 @@ file is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and
 this project adheres to [Semantic
 Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.41.0] - 2025-09-17
 
 ### Added
 
@@ -51,6 +51,9 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 - Time series data is now stored in RocksDB instead of PostgreSQL. A built-in
   migration will automatically move existing time series data from PostgreSQL
   to RocksDB.
+- Simplified HTTP-related event structures by merging `orig_filenames` and
+  `resp_filenames` as well as `orig_mime_types` and `resp_mime_types`, and
+  renaming `body` to `post_body`.
 
 ### Removed
 
@@ -67,7 +70,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added missing migrations for `FtpPlainText` and `LdapPlainText`.
 
-## [0.40.0] - 2025-08-13
+## [0.40.0] - 2025-08-13 [YANKED]
 
 ### Added
 
@@ -125,7 +128,7 @@ Versioning](https://semver.org/spec/v2.0.0.html).
   ensures that threat confidence is accurately represented and used in scoring logic.
 - `Event::count_country` includes those events without destination.
 
-## [0.39.0] - 2025-07-07
+## [0.39.0] - 2025-07-07 [YANKED]
 
 ### Added
 
@@ -1040,7 +1043,7 @@ AsRef<[u8]>`). This change accommodates scenarios where the information stored
 - Modified `FtpBruteForce` by adding an `is_internal` field which is a boolean
   indicating whether it is internal or not.
 
-[Unreleased]: https://github.com/petabi/review-database/compare/0.40.0...0.41.0
+[0.41.0]: https://github.com/petabi/review-database/compare/0.40.0...0.41.0
 [0.40.0]: https://github.com/petabi/review-database/compare/0.39.0...0.40.0
 [0.39.0]: https://github.com/petabi/review-database/compare/v0.38.0...0.39.0
 [0.38.0]: https://github.com/petabi/review-database/compare/0.37.0...0.38.0

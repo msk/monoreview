@@ -1962,9 +1962,9 @@ dependencies = [
 
 [[package]]
 name = "ip2location"
-version = "0.5.4"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aef1e1d04f2b6a44944a521b3a9d16b596b21fcf1b678a61579dc0ed5689a223"
+checksum = "4f6b2559e346b2b086be8d845ee68a69e60479f368d3d25135d911d89c5dd8a1"
 dependencies = [
  "memmap2",
  "serde",
@@ -3452,8 +3452,8 @@ dependencies = [
 
 [[package]]
 name = "review-database"
-version = "0.41.0-alpha.3"
-source = "git+https://github.com/petabi/review-database.git?rev=2ac4429#2ac4429a0a71e73d0d8fcee390ca02d8b3d212c2"
+version = "0.41.0"
+source = "git+https://github.com/petabi/review-database.git?tag=0.41.0#3dc2d0b45b9b03db4e5206e8182f5e75e909175f"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -3521,7 +3521,7 @@ dependencies = [
 [[package]]
 name = "review-web"
 version = "0.27.0"
-source = "git+https://github.com/aicers/review-web.git?rev=59697e6#59697e6adf69b5f25a84d8c043cc43438561ccbc"
+source = "git+https://github.com/aicers/review-web.git?rev=6bdffec#6bdffec2c31779c2b40d9820611e62b7eedca786"
 dependencies = [
  "anyhow",
  "async-graphql",
